@@ -23,14 +23,14 @@ build_needs "$libertine_build"-cc "$libertine_build"-c++ "$libertine_build"-ar "
 depends build_musl_cross_make_build
 
 build_needs "$libertine_host"-cc "$libertine_host"-c++ "$libertine_host"-ar "$libertine_host"-ranlib "$libertine_host"-as "$libertine_host"-ld "$libertine_host"-strip "$libertine_host"-nm "$libertine_host"-objcopy "$libertine_host"-objdump "$libertine_host"-readelf
-depends host_musl_cross_make_host
+depends build_musl_cross_make_host
 
 libertine_compile_llvm_4_0()
 {
+	local ourPythonWithVersion=python2.7
 	local pythonBinaryFilePath="$(libertine_public_buildNeedsPath)"/python
 	ln -s "$ourPythonWithVersion" "$pythonBinaryFilePath"
 	
-	local ourPythonWithVersion=python2.7
 	local pythonIncludeFolderPath="$("$pythonBinaryFilePath" -c "from distutils.sysconfig import get_python_inc; print(get_python_inc())")"
 	local pythonLibFolderPath="$("$pythonBinaryFilePath" -c "import distutils.sysconfig as sysconfig; import os; print(sysconfig.get_config_var('LIBDIR'))")"
 	local pythonStaticLibraryFilePath="$pythonLibFolderPath"/lib${ourPythonWithVersion}.a
@@ -45,7 +45,7 @@ libertine_compile_llvm_4_0()
 		# DLIBCXX_USE_COMPILER_RT - uses compiler-rt rather that libgcc
 		libertine_public_cmake \
 			-DPYTHON_INCLUDE_DIR="$pythonIncludeFolderPath" \
-			-DPYTHON_LIBRARY="$pythonStaticLibraryFilePath" \	
+			-DPYTHON_LIBRARY="$pythonStaticLibraryFilePath" \
 			-DPYTHON_HOME='/usr' \
 			-DLLVM_TARGETS_TO_BUILD:STRING='all' \
 			-DLLVM_BUILD_TOOLS:BOOL=ON \
