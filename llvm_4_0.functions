@@ -16,43 +16,33 @@ build_needs cmake
 depends build_busybox
 build_needs sh env
 
-depends build_python_2_7
-build_needs python2.7
-
 build_needs "$libertine_build"-cc "$libertine_build"-c++ "$libertine_build"-ar "$libertine_build"-ranlib "$libertine_build"-as "$libertine_build"-ld "$libertine_build"-strip "$libertine_build"-nm "$libertine_build"-objcopy "$libertine_build"-objdump "$libertine_build"-readelf
 depends build_musl_cross_make_build
 
 build_needs "$libertine_host"-cc "$libertine_host"-c++ "$libertine_host"-ar "$libertine_host"-ranlib "$libertine_host"-as "$libertine_host"-ld "$libertine_host"-strip "$libertine_host"-nm "$libertine_host"-objcopy "$libertine_host"-objdump "$libertine_host"-readelf
 depends build_musl_cross_make_host
 
+build_needs patch
+depends build_netbsd_src_patch
+
+build_needs python2.7
+depends build_python_2_7
+
 libertine_compile_llvm_4_0()
-{
-	local ourPythonWithVersion=python2.7
-	local pythonBinaryFilePath="$(libertine_public_buildNeedsPath)"/python
-	ln -s "$ourPythonWithVersion" "$pythonBinaryFilePath"
-	
-	local pythonIncludeFolderPath="$("$pythonBinaryFilePath" -c "from distutils.sysconfig import get_python_inc; print(get_python_inc())")"
-	local pythonLibFolderPath="$("$pythonBinaryFilePath" -c "import distutils.sysconfig as sysconfig; import os; print(sysconfig.get_config_var('LIBDIR'))")"
-	local pythonStaticLibraryFilePath="$pythonLibFolderPath"/lib${ourPythonWithVersion}.a
-	
-	# Info: https://blogs.gentoo.org/gsoc2016-native-clang/2016/05/05/build-a-freestanding-libcxx/
-	# Info: https://stackoverflow.com/questions/25840088/how-to-build-libcxx-and-libcxxabi-by-clang-on-centos-7
-	
+{	
 	pushd "$(libertine_public_sourcePath)"
 		
-		# http://llvm.org/docs/CMake.html
-						
-		# DLIBCXX_USE_COMPILER_RT - uses compiler-rt rather that libgcc
-		libertine_public_cmake \
-			-DPYTHON_INCLUDE_DIR="$pythonIncludeFolderPath" \
-			-DPYTHON_LIBRARY="$pythonStaticLibraryFilePath" \
-			-DPYTHON_HOME='/usr' \
+		# http://llvm.org/docs/CMake.html and upstream/CMakeLists.txt
+		
+		# LLVM_TARGET_ARCH is for the JIT
+		libertine_public_cmake_dynamic \
+			-DLLVM_TARGET_ARCH:STRING="$libertine_hostLlvm" \
+			-DLLVM_ENABLE_PIC:BOOL=OFF \
+			-DLLVM_ENABLE_WARNINGS:BOOL=OFF \
 			-DLLVM_TARGETS_TO_BUILD:STRING='all' \
 			-DLLVM_BUILD_TOOLS:BOOL=ON \
 			-DLLVM_INCLUDE_TOOLS:BOOL=ON \
-			-DLLVM_BUILD_EXAMPLES:BOOL=OFF \
 			-DLLVM_INCLUDE_EXAMPLES:BOOL=OFF \
-			-DLLVM_BUILD_TESTS:BOOL=OFF \
 			-DLLVM_INCLUDE_TESTS:BOOL=OFF \
 			-DLLVM_APPEND_VC_REV:BOOL=OFF \
 			-DLLVM_ENABLE_THREADS:BOOL=ON \
@@ -60,45 +50,24 @@ libertine_compile_llvm_4_0()
 			-DLLVM_ENABLE_ASSERTIONS:BOOL=OFF \
 			-DLLVM_ENABLE_EH:BOOL=OFF \
 			-DLLVM_ENABLE_EXPENSIVE_CHECKS:BOOL=OFF \
-			-DLLVM_ENABLE_PIC:BOOL=OFF \
 			-DLLVM_ENABLE_RTTI:BOOL=OFF \
-			-DLLVM_ENABLE_WARNINGS:BOOL=ON \
-			-DLLVM_ENABLE_PEDANTIC:BOOL=OFF \
+			-DLLVM_ENABLE_WARNINGS:BOOL=OFF \
 			-DLLVM_ENABLE_WERROR:BOOL=OFF \
 			-DLLVM_ABI_BREAKING_CHECKS:STRING='WITH_ASSERTS' \
 			-DLLVM_BUILD_32_BITS:BOOL=OFF \
-			-DLLVM_TARGET_ARCH:STRING='host' \
-			-DLLVM_ENABLE_FFI:BOOL=OFF
-			# -DLIBCXX_ENABLE_EXPERIMENTAL_LIBRARY:BOOL=OFF \
-			# -DLIBCXX_ENABLE_FILESYSTEM:BOOL=OFF \
-			# -DLIBCXX_INCLUDE_TESTS:BOOL=OFF \
-			# -DLIBCXX_INCLUDE_DOCS:BOOL=OFF \
-			# -DLIBCXX_USE_COMPILER_RT:BOOL=ON \
-			# -DLIBCXX_INSTALL_LIBRARY:BOOL=ON \
-			# -DLIBCXX_INSTALL_HEADERS:BOOL=ON \
-			# -DLIBCXX_ENABLE_ASSERTIONS:BOOL=OFF \
-			# -DLIBCXX_BUILD_32_BITS:BOOL=OFF \
-			# -DLIBCXX_ENABLE_SHARED:BOOL=OFF \
-			# -DLIBCXX_CXX_ABI:STRING='libcxxabi' \
-			# -DLIBCXX_ENABLE_STATIC_ABI_LIBRARY:BOOL=ON \
-			# -DLIBCXX_ENABLE_ABI_LINKER_SCRIPT:BOOL=OFF \
-			# -DLIBCXXABI_USE_LLVM_UNWINDER:BOOL=ON \
-			# -DLIBCXX_INCLUDE_BENCHMARKS:BOOL=OFF
-			# -DLIBCXX_HAS_MUSL_LIBC:BOOL=ON \
-			# -DLIBCXX_HAS_PTHREAD_API:BOOL=ON \
-			# -DLIBUNWIND_BUILD_32_BITS:BOOL=OFF \
-			# -DLIBUNWIND_ENABLE_ASSERTIONS:BOOL=OFF \
-			# -DLIBUNWIND_ENABLE_PEDANTIC:BOOL=OFF \
-			# -DLIBUNWIND_ENABLE_SHARED:BOOL=OFF \
-			# -DLIBUNWIND_ENABLE_CROSS_UNWINDING:BOOL=OFF \
-			# -DLIBUNWIND_ENABLE_THREADS:BOOL=ON \
-			# -DLIBCXX_HAS_GCC_S_LIB=0 \
-			# -DLIBCXXABI_LIBCXX_INCLUDES=../../libcxx/include
+			-DLLVM_ENABLE_FFI:BOOL=OFF \
+			-DLLVM_ENABLE_PIC:BOOL=OFF \
+			-DLLVM_BUILD_LLVM_DYLIB:BOOL=OFF \
+			-DLLVM_LINK_LLVM_DYLIB:BOOL=OFF \
+			-DBUILD_SHARED_LIBS:BOOL=OFF \
+			-DLLVM_OPTIMIZED_TABLEGEN:BOOL=ON \
+			-DLLVM_INCLUDE_TESTS:BOOL=OFF \
+			-DLLVM_INCLUDE_EXAMPLES:BOOL=OFF \
 			
 		pushd .libertine-cmake-build
 			
 			libertine_public_make VERBOSE=1
-			libertine_public_make install
+			libertine_public_make DESTDIR="$(libertine_public_outputHostSysrootPath)" install
 		
 		popd
 		
