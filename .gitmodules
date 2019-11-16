@@ -2,4 +2,3 @@
 	path = upstream
 	url = https://github.com/libertine-linux-clones/llvm.git
 	branch = master
-	libertine-linux-upstream = https://github.com/llvm-mirror/llvm.git
